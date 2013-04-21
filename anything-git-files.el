@@ -95,9 +95,9 @@ Update states are tracked for each KEY separately."
       (vc-file-setprop root prop status)
       t)))
 
-(defun anything-git-files:init-fun (what)
+(defun anything-git-files:init-fun (what &optional root)
   `(lambda ()
-     (let* ((root (anything-git-files:root))
+     (let* ((root (or ,root (anything-git-files:root)))
             (buffer-name (format "*anything candidates:%s:%s*" root ',what))
             (buffer (get-buffer-create buffer-name)))
        (anything-attrset 'default-directory root) ; saved for `display-to-real'
@@ -109,12 +109,14 @@ Update states are tracked for each KEY separately."
 (defun anything-git-files:display-to-real (name)
   (expand-file-name name (anything-attr 'default-directory)))
 
-(defun anything-git-files:source (name what)
-  `((name . ,name)
-    (init . ,(anything-git-files:init-fun what))
-    (candidates-in-buffer)
-    (type . file)
-    (display-to-real . anything-git-files:display-to-real)))
+(defun anything-git-files:source (what &optional root)
+  (let ((name (concat (format "Git %s" (capitalize (format "%s" what)))
+                      (or (and root (format " in %s" root)) ""))))
+    `((name . ,name)
+      (init . ,(anything-git-files:init-fun what root))
+      (candidates-in-buffer)
+      (type . file)
+      (display-to-real . anything-git-files:display-to-real))))
 
 ;;;###autoload
 (defun anything-git-files:git-p (&optional root)
@@ -123,17 +125,17 @@ Update states are tracked for each KEY separately."
 ;;;###autoload
 (defvar anything-git-files:modified-source nil)
 (setq anything-git-files:modified-source
-      (anything-git-files:source "Git Modified" 'modified))
+      (anything-git-files:source 'modified))
 
 ;;;###autoload
 (defvar anything-git-files:untracked-source nil)
 (setq anything-git-files:untracked-source
-      (anything-git-files:source "Git Untracked" 'untracked))
+      (anything-git-files:source 'untracked))
 
 ;;;###autoload
 (defvar anything-git-files:all-source nil)
 (setq anything-git-files:all-source
-      (anything-git-files:source "Git All" 'all))
+      (anything-git-files:source 'all))
 
 ;;;###autoload
 (defun anything-git-files ()
