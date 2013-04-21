@@ -117,6 +117,10 @@ Update states are tracked for each KEY separately."
     (display-to-real . anything-git-files:display-to-real)))
 
 ;;;###autoload
+(defun anything-git-files:git-p (&optional root)
+  (ignore-errors (anything-git-files:status-hash root)))
+
+;;;###autoload
 (defvar anything-git-files:modified-source
   (anything-git-files:source "Modified files" 'modified))
 
