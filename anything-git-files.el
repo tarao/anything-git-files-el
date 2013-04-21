@@ -45,24 +45,18 @@
     (with-current-buffer standard-output
       (apply 'vc-git-command (current-buffer) 0 nil args))))
 
-(defmacro anything-git-files:define-rev-parse (name arg)
-  (let* ((fun (intern (format "anything-git-files:%s" name)))
-         (fun1 (intern (format "%s-1" fun)))
-         (prop (intern (format "git-%s" name))))
-    `(progn
-       (defun ,fun1 ()
-         (file-name-as-directory
-          (anything-git-files:chomp
-           (anything-git-files:command-to-string "rev-parse" ,arg))))
-       (defun ,fun ()
-         (or (vc-file-getprop default-directory ',prop)
-             (vc-file-setprop default-directory ',prop (,fun1)))))))
-(anything-git-files:define-rev-parse root "--show-toplevel")
-(anything-git-files:define-rev-parse root-relative "--show-cdup")
+(defun anything-git-files:root-1 ()
+  (file-name-as-directory
+   (anything-git-files:chomp
+    (anything-git-files:command-to-string "rev-parse" "--show-toplevel"))))
+
+(defun anything-git-files:root ()
+  (or (vc-file-getprop default-directory 'git-root)
+      (vc-file-setprop default-directory 'git-root
+                       (anything-git-files:root-1))))
 
 (defun anything-git-files:ls (buffer &rest args)
-  (let ((rel (anything-git-files:root-relative)))
-    (apply 'vc-git-command buffer 0 rel "ls-files" args)))
+  (apply 'vc-git-command buffer 0 nil "ls-files" args))
 
 (defun anything-git-files:status-1 ()
   (anything-git-files:command-to-string "status" "--porcelain"))
