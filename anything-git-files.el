@@ -123,17 +123,17 @@ Update states are tracked for each KEY separately."
 ;;;###autoload
 (defvar anything-git-files:modified-source nil)
 (setq anything-git-files:modified-source
-      (anything-git-files:source "Modified files" 'modified))
+      (anything-git-files:source "Git Modified" 'modified))
 
 ;;;###autoload
 (defvar anything-git-files:untracked-source nil)
 (setq anything-git-files:untracked-source
-      (anything-git-files:source "Untracked files" 'untracked))
+      (anything-git-files:source "Git Untracked" 'untracked))
 
 ;;;###autoload
 (defvar anything-git-files:all-source nil)
 (setq anything-git-files:all-source
-      (anything-git-files:source "All files" 'all))
+      (anything-git-files:source "Git All" 'all))
 
 ;;;###autoload
 (defun anything-git-files ()
