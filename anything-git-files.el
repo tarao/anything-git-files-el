@@ -135,9 +135,10 @@ Update states are tracked for each KEY separately."
          (modules (anything-git-files:submodules root))
          (kinds (if (listp kinds) kinds (list kinds))))
     (loop for module in modules
-          for what in kinds
-          for path = (file-name-as-directory (expand-file-name module root))
-          collect (anything-git-files:source what path module))))
+          append (loop for what in kinds
+                       for path = (file-name-as-directory
+                                   (expand-file-name module root))
+                       collect (anything-git-files:source what path module)))))
 
 ;;;###autoload
 (defun anything-git-files:git-p (&optional root)
