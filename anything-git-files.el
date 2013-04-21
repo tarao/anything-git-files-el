@@ -93,7 +93,7 @@ Update states are tracked for each KEY separately."
 (defun anything-git-files:init-fun (what &optional root)
   `(lambda ()
      (let* ((root (or ,root (anything-git-files:root)))
-            (buffer-name (format "*anything candidates:%s:%s*" root ',what))
+            (buffer-name (format " *anything candidates:%s:%s*" root ',what))
             (buffer (get-buffer-create buffer-name)))
        (anything-attrset 'default-directory root) ; saved for `display-to-real'
        (anything-candidate-buffer buffer)
