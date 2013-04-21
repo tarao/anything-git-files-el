@@ -104,7 +104,8 @@ Update states are tracked for each KEY separately."
        (anything-attrset 'default-directory root) ; saved for `display-to-real'
        (anything-candidate-buffer buffer)
        (when (anything-git-files:updated-p root ',what)
-         (let ((args (cdr (assq ',what anything-git-files:ls-args))))
+         (let ((default-directory root)
+               (args (cdr (assq ',what anything-git-files:ls-args))))
            (apply 'anything-git-files:ls buffer "--full-name" args))))))
 
 (defun anything-git-files:display-to-real (name)
