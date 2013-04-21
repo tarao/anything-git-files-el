@@ -121,16 +121,19 @@ Update states are tracked for each KEY separately."
   (ignore-errors (anything-git-files:status-hash root)))
 
 ;;;###autoload
-(defvar anything-git-files:modified-source
-  (anything-git-files:source "Modified files" 'modified))
+(defvar anything-git-files:modified-source nil)
+(setq anything-git-files:modified-source
+      (anything-git-files:source "Modified files" 'modified))
 
 ;;;###autoload
-(defvar anything-git-files:untracked-source
-  (anything-git-files:source "Untracked files" 'untracked))
+(defvar anything-git-files:untracked-source nil)
+(setq anything-git-files:untracked-source
+      (anything-git-files:source "Untracked files" 'untracked))
 
 ;;;###autoload
-(defvar anything-git-files:all-source
-  (anything-git-files:source "All files" 'all))
+(defvar anything-git-files:all-source nil)
+(setq anything-git-files:all-source
+      (anything-git-files:source "All files" 'all))
 
 ;;;###autoload
 (defun anything-git-files ()
