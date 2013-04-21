@@ -130,16 +130,6 @@ Update states are tracked for each KEY separately."
           if (> (length module) 0)
           collect module)))
 
-(defun anything-git-files:submodule-sources (kinds &optional root)
-  (let* ((root (or root (anything-git-files:root)))
-         (modules (anything-git-files:submodules root))
-         (kinds (if (listp kinds) kinds (list kinds))))
-    (loop for module in modules
-          append (loop for what in kinds
-                       for path = (file-name-as-directory
-                                   (expand-file-name module root))
-                       collect (anything-git-files:source what path module)))))
-
 ;;;###autoload
 (defun anything-git-files:git-p (&optional root)
   (ignore-errors (anything-git-files:status-hash root)))
@@ -158,6 +148,17 @@ Update states are tracked for each KEY separately."
 (defvar anything-git-files:all-source nil)
 (setq anything-git-files:all-source
       (anything-git-files:source 'all))
+
+;;;###autoload
+(defun anything-git-files:submodule-sources (kinds &optional root)
+  (let* ((root (or root (anything-git-files:root)))
+         (modules (anything-git-files:submodules root))
+         (kinds (if (listp kinds) kinds (list kinds))))
+    (loop for module in modules
+          append (loop for what in kinds
+                       for path = (file-name-as-directory
+                                   (expand-file-name module root))
+                       collect (anything-git-files:source what path module)))))
 
 ;;;###autoload
 (defun anything-git-files ()
