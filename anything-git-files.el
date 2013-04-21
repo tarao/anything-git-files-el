@@ -23,6 +23,7 @@
 
 ;;; Code:
 
+(eval-when-compile (require 'cl))
 (require 'vc-git)
 (require 'anything-config)
 
@@ -109,14 +110,33 @@ Update states are tracked for each KEY separately."
 (defun anything-git-files:display-to-real (name)
   (expand-file-name name (anything-attr 'default-directory)))
 
-(defun anything-git-files:source (what &optional root)
+(defun anything-git-files:source (what &optional root repository)
   (let ((name (concat (format "Git %s" (capitalize (format "%s" what)))
-                      (or (and root (format " in %s" root)) ""))))
+                      (or (and repository (format " in %s" repository)) ""))))
     `((name . ,name)
       (init . ,(anything-git-files:init-fun what root))
       (candidates-in-buffer)
       (type . file)
       (display-to-real . anything-git-files:display-to-real))))
+
+(defun anything-git-files:submodules (&optional root)
+  (let ((default-directory (or root (anything-git-files:root)))
+        (args '("submodule" "--quiet" "foreach" "echo $path")))
+    (loop for module in (split-string
+                         (anything-git-files:chomp
+                          (apply 'anything-git-files:command-to-string args))
+                         "[\r\n]+")
+          if (> (length module) 0)
+          collect module)))
+
+(defun anything-git-files:submodule-sources (kinds &optional root)
+  (let* ((root (or root (anything-git-files:root)))
+         (modules (anything-git-files:submodules root))
+         (kinds (if (listp kinds) kinds (list kinds))))
+    (loop for module in modules
+          for what in kinds
+          for path = (file-name-as-directory (expand-file-name module root))
+          collect (anything-git-files:source what path module))))
 
 ;;;###autoload
 (defun anything-git-files:git-p (&optional root)
@@ -141,9 +161,11 @@ Update states are tracked for each KEY separately."
 (defun anything-git-files ()
   "`anything' for opening files managed by Git."
   (interactive)
-  (anything-other-buffer '(anything-git-files:modified-source
+  (anything-other-buffer `(anything-git-files:modified-source
                            anything-git-files:untracked-source
-                           anything-git-files:all-source)
+                           anything-git-files:all-source
+                           ,@(anything-git-files:submodule-sources
+                              '(modified untracked all)))
                          "*anything for git files*"))
 
 (provide 'anything-git-files)
