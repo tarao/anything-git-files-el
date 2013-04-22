@@ -28,10 +28,24 @@
 (require 'anything-config)
 (require 'sha1 nil t)
 
+(defgroup anything-git-files nil
+  "anything for git files."
+  :prefix "anything-git-files:" :group 'anything)
+
+(defcustom anything-git-files:update-submodules-once nil
+  "t means to update file list in submodules only once."
+  :type 'boolean
+  :group 'anything-git-files)
+
 (defconst anything-git-files:ls-args
   '((modified . ("--modified"))
     (untracked . ("--others" "--exclude-standard"))
     (all . nil)))
+
+(defconst anything-git-files:update-check-functions
+  '((modified . anything-git-files:status-updated-p)
+    (untracked . anything-git-files:status-updated-p)
+    (all . anything-git-files:head-updated-p)))
 
 (defconst anything-git-files:status-expire 1)
 
@@ -60,6 +74,11 @@
       (vc-file-setprop default-directory 'git-root
                        (anything-git-files:root-1))))
 
+(defun anything-git-files:head (&optional root)
+  (let ((default-directory (or root default-directory)))
+    (anything-git-files:chomp
+     (anything-git-files:command-to-string "rev-parse" "HEAD"))))
+
 (defun anything-git-files:ls (buffer &rest args)
   (apply 'vc-git-command buffer 0 nil "ls-files" args))
 
@@ -84,9 +103,24 @@ they have been updated."
     (vc-file-setprop default-directory prop info)
     (plist-get info :hash)))
 
-(defun anything-git-files:updated-p (root &optional key)
-  "Check if the status hash value for ROOT repository is updated.
-Update states are tracked for each KEY separately."
+(defun anything-git-files:once-updated-p (root &optional key)
+  (let* ((key (or (and key (format "-%s" key)) ""))
+         (prop (intern (format "anything-git-files:once-updated%s" key)))
+         (updated (vc-file-getprop root prop)))
+    (unless updated
+      (vc-file-setprop root prop t)
+      t)))
+
+(defun anything-git-files:head-updated-p (root &optional key)
+  (let* ((key (or (and key (format "-%s" key)) ""))
+         (prop (intern (format "anything-git-files:last-head%s" key)))
+         (last-head (vc-file-getprop root prop))
+         (head (anything-git-files:head root)))
+    (unless (and last-head (string= head last-head))
+      (vc-file-setprop root prop head)
+      t)))
+
+(defun anything-git-files:status-updated-p (root &optional key)
   (let* ((key (or (and key (format "-%s" key)) ""))
          (prop (intern (format "anything-git-files:last-status%s" key)))
          (last-status (vc-file-getprop root prop))
@@ -95,14 +129,26 @@ Update states are tracked for each KEY separately."
       (vc-file-setprop root prop status)
       t)))
 
-(defun anything-git-files:init-fun (what &optional root)
+(defun anything-git-files:updated-p (mode root &optional key update-once)
+  "Check if the status hash value for ROOT repository is updated.
+MODE specifies how to check the update status.  The update status
+is tracked for each KEY separately."
+  (let ((funs (or (and update-once 'anything-git-files:once-updated-p)
+                  (cdr (assq mode anything-git-files:update-check-functions))
+                  '(anything-git-files:head-updated-p
+                    anything-git-files:status-updated-p))))
+    (unless (listp funs) (setq funs (list funs)))
+    (loop for fun in funs
+          always (funcall fun root key))))
+
+(defun anything-git-files:init-fun (what &optional root update-once)
   `(lambda ()
      (let* ((root (or ,root (anything-git-files:root)))
             (buffer-name (format " *anything candidates:%s:%s*" root ',what))
             (buffer (get-buffer-create buffer-name)))
        (anything-attrset 'default-directory root) ; saved for `display-to-real'
        (anything-candidate-buffer buffer)
-       (when (anything-git-files:updated-p root ',what)
+       (when (anything-git-files:updated-p ',what root ',what ,update-once)
          (let ((default-directory root)
                (args (cdr (assq ',what anything-git-files:ls-args))))
            (apply 'anything-git-files:ls buffer "--full-name" args))))))
@@ -110,12 +156,13 @@ Update states are tracked for each KEY separately."
 (defun anything-git-files:display-to-real (name)
   (expand-file-name name (anything-attr 'default-directory)))
 
-(defun anything-git-files:source (what &optional root repository)
+(defun anything-git-files:source (what &optional root repository update-once)
   (let ((name (concat (format "Git %s" (capitalize (format "%s" what)))
                       (or (and repository (format " in %s" repository)) ""))))
     `((name . ,name)
-      (init . ,(anything-git-files:init-fun what root))
+      (init . ,(anything-git-files:init-fun what root update-once))
       (candidates-in-buffer)
+      (delayed)
       (type . file)
       (display-to-real . anything-git-files:display-to-real))))
 
@@ -152,12 +199,14 @@ Update states are tracked for each KEY separately."
 (defun anything-git-files:submodule-sources (kinds &optional root)
   (let* ((root (or root (anything-git-files:root)))
          (modules (anything-git-files:submodules root))
-         (kinds (if (listp kinds) kinds (list kinds))))
+         (kinds (if (listp kinds) kinds (list kinds)))
+         (once anything-git-files:update-submodules-once))
     (loop for module in modules
           append (loop for what in kinds
                        for path = (file-name-as-directory
                                    (expand-file-name module root))
-                       collect (anything-git-files:source what path module)))))
+                       collect (anything-git-files:source
+                                what path module once)))))
 
 ;;;###autoload
 (defun anything-git-files ()
