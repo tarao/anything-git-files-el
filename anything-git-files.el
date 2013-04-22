@@ -26,6 +26,7 @@
 (eval-when-compile (require 'cl))
 (require 'vc-git)
 (require 'anything-config)
+(require 'sha1 nil t)
 
 (defconst anything-git-files:ls-args
   '((modified . ("--modified"))
@@ -37,8 +38,12 @@
 (defsubst anything-git-files:chomp (str)
   (replace-regexp-in-string "[\r\n]+$" "" str))
 
-(defsubst anything-git-files:hash (obj)
-  (secure-hash 'sha1 obj))
+(defun anything-git-files:hash (obj)
+  obj)
+(cond ((fboundp 'secure-hash)
+       (defun anything-git-files:hash (obj)
+         (secure-hash 'sha1 obj)))
+      ((fboundp 'sha1) (fset 'anything-git-files:hash 'sha1)))
 
 (defun anything-git-files:command-to-string (&rest args)
   (with-output-to-string
@@ -73,7 +78,7 @@ they have been updated."
          (now (float-time)))
     (when (or (not (numberp last))
               (> now (+ anything-git-files:status-expire last)))
-      (let ((hash (secure-hash 'sha1 (anything-git-files:status-1))))
+      (let ((hash (anything-git-files:hash (anything-git-files:status-1))))
         (setq info (plist-put info :hash hash))))
     (setq info (plist-put info :last now))
     (vc-file-setprop default-directory prop info)
