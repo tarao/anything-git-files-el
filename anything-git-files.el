@@ -205,6 +205,7 @@ is tracked for each KEY separately."
           append (loop for what in kinds
                        for path = (file-name-as-directory
                                    (expand-file-name module root))
+                       if (file-exists-p path)
                        collect (anything-git-files:source
                                 what path module once)))))
 
