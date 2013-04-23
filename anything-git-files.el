@@ -166,8 +166,19 @@ is tracked for each KEY separately."
       (type . file)
       (display-to-real . anything-git-files:display-to-real))))
 
-(defun anything-git-files:submodules (&optional root)
-  (let ((default-directory (or root (anything-git-files:root)))
+(defun anything-git-files:submodules-by-dot (&optional dotgitmodule)
+  (let ((exp "^[[:space:]]*path[[:space:]]*=[[:space:]]*\\(.*\\)[[:space:]]*$")
+        (result (list)))
+    (with-temp-buffer
+      (insert-file-contents-literally dotgitmodule)
+      (print (point-max))
+      (goto-char (point-min))
+      (while (re-search-forward exp nil t)
+        (push (match-string 1) result))
+      (reverse result))))
+
+(defun anything-git-files:submodules-by-foreach (&optional root)
+  (let ((default-directory root)
         (args '("submodule" "--quiet" "foreach" "echo $path")))
     (loop for module in (split-string
                          (anything-git-files:chomp
@@ -175,6 +186,13 @@ is tracked for each KEY separately."
                          "[\r\n]+")
           if (> (length module) 0)
           collect module)))
+
+(defun anything-git-files:submodules (&optional root)
+  (let* ((root (or root (anything-git-files:root)))
+         (dotgitmodule (expand-file-name ".gitmodules" root)))
+    (if (file-exists-p dotgitmodule)
+        (anything-git-files:submodules-by-dot dotgitmodule)
+      (anything-git-files:submodules-by-foreach root))))
 
 ;;;###autoload
 (defun anything-git-files:git-p (&optional root)
