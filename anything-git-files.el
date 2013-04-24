@@ -171,7 +171,6 @@ is tracked for each KEY separately."
         (result (list)))
     (with-temp-buffer
       (insert-file-contents-literally dotgitmodule)
-      (print (point-max))
       (goto-char (point-min))
       (while (re-search-forward exp nil t)
         (push (match-string 1) result))
