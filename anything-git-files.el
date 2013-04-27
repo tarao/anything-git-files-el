@@ -195,7 +195,7 @@ is tracked for each KEY separately."
 
 ;;;###autoload
 (defun anything-git-files:git-p (&optional root)
-  (ignore-errors (anything-git-files:status-hash root)))
+  (ignore-errors (anything-git-files:head root)))
 
 ;;;###autoload
 (defvar anything-git-files:modified-source nil)
