@@ -141,17 +141,21 @@ is tracked for each KEY separately."
     (loop for fun in funs
           always (funcall fun root key))))
 
-(defun anything-git-files:init-fun (what &optional root update-once)
-  `(lambda ()
-     (let* ((root (or ,root (anything-git-files:root)))
-            (buffer-name (format " *anything candidates:%s:%s*" root ',what))
-            (buffer (get-buffer-create buffer-name)))
-       (anything-attrset 'default-directory root) ; saved for `display-to-real'
-       (anything-candidate-buffer buffer)
-       (when (anything-git-files:updated-p ',what root ',what ,update-once)
-         (let ((default-directory root)
-               (args (cdr (assq ',what anything-git-files:ls-args))))
-           (apply 'anything-git-files:ls buffer "--full-name" args))))))
+(defun anything-git-files:candidates (what &optional root update-once)
+  (let* ((root (or root (anything-git-files:root)))
+         (buffer-name (format " *anything candidates:%s:%s*" root what))
+         (buffer (get-buffer-create buffer-name)))
+    (anything-attrset 'default-directory root) ; saved for `display-to-real'
+    (when (anything-git-files:updated-p what root what update-once)
+      (let ((default-directory root)
+            (args (cdr (assq what anything-git-files:ls-args)))
+            contents candidates)
+        (apply 'anything-git-files:ls buffer "--full-name" args)))
+    (anything-candidate-buffer buffer)
+    (anything-candidates-in-buffer)))
+
+(defun anything-git-files:candidates-fun (what &optional root update-once)
+  `(lambda () (anything-git-files:candidates ',what ,root ,update-once)))
 
 (defun anything-git-files:display-to-real (name)
   (expand-file-name name (anything-attr 'default-directory)))
@@ -160,8 +164,7 @@ is tracked for each KEY separately."
   (let ((name (concat (format "Git %s" (capitalize (format "%s" what)))
                       (or (and repository (format " in %s" repository)) ""))))
     `((name . ,name)
-      (init . ,(anything-git-files:init-fun what root update-once))
-      (candidates-in-buffer)
+      (candidates . ,(anything-git-files:candidates-fun what root update-once))
       (delayed)
       (type . file)
       (display-to-real . anything-git-files:display-to-real))))
