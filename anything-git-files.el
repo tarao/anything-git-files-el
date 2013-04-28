@@ -166,6 +166,7 @@ is tracked for each KEY separately."
     `((name . ,name)
       (candidates . ,(anything-git-files:candidates-fun what root update-once))
       (delayed)
+      (volatile)
       (type . file)
       (display-to-real . anything-git-files:display-to-real))))
 
