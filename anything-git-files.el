@@ -167,6 +167,7 @@ is tracked for each KEY separately."
       (candidates . ,(anything-git-files:candidates-fun what root update-once))
       (delayed)
       (volatile)
+      (match identity)
       (type . file)
       (display-to-real . anything-git-files:display-to-real))))
 
