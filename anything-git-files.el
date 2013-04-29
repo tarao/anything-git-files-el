@@ -144,7 +144,9 @@ is tracked for each KEY separately."
           always (funcall fun root key))))
 
 (defun anything-git-files:candidates (what &optional root update-once)
-  (let* ((root (or root (anything-git-files:root)))
+  (let* ((root (or root
+                   (anything-attr 'default-directory)
+                   (anything-git-files:root)))
          (buffer-name (format " *anything candidates:%s:%s*" root what))
          (buffer (get-buffer-create buffer-name)))
     (anything-attrset 'default-directory root) ; saved for `display-to-real'
@@ -156,6 +158,9 @@ is tracked for each KEY separately."
     (anything-candidate-buffer buffer)
     (anything-candidates-in-buffer)))
 
+(defun anything-git-files:init ()
+  (anything-attrset 'default-directory default-directory))
+
 (defun anything-git-files:candidates-fun (what &optional root update-once)
   `(lambda () (anything-git-files:candidates ',what ,root ,update-once)))
 
@@ -166,6 +171,7 @@ is tracked for each KEY separately."
   (let ((name (concat (format "Git %s" (capitalize (format "%s" what)))
                       (or (and repository (format " in %s" repository)) ""))))
     `((name . ,name)
+      (init . anything-git-files:init)
       (candidates . ,(anything-git-files:candidates-fun what root update-once))
       (delayed)
       (volatile)
