@@ -44,7 +44,7 @@
 
 (defconst anything-git-files:update-check-functions
   '((modified . anything-git-files:status-updated-p)
-    (untracked . anything-git-files:status-updated-p)
+    (untracked . anything-git-files:t)
     (all . anything-git-files:head-updated-p)))
 
 (defconst anything-git-files:status-expire 1)
@@ -83,7 +83,7 @@
   (apply 'vc-git-command buffer 0 nil "ls-files" args))
 
 (defun anything-git-files:status-1 ()
-  (anything-git-files:command-to-string "status" "--porcelain"))
+  (anything-git-files:command-to-string "status" "--porcelain" "-uno"))
 
 (defun anything-git-files:status-hash (&optional root)
   "Get hash value of \"git status\" for ROOT repository.
@@ -110,6 +110,8 @@ they have been updated."
     (unless updated
       (vc-file-setprop root prop t)
       t)))
+
+(defun anything-git-files:t (&rest args) t)
 
 (defun anything-git-files:head-updated-p (root &optional key)
   (let* ((key (or (and key (format "-%s" key)) ""))
