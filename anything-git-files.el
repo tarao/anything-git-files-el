@@ -173,7 +173,7 @@ is tracked for each KEY separately."
     (anything-update)))
 
 (defun anything-git-files:init ()
-  (anything-attrset 'default-directory default-directory))
+  (anything-attrset 'default-directory (anything-git-files:root)))
 
 (defun anything-git-files:cleanup ()
   (setq anything-git-files:cached nil))
