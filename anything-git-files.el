@@ -28,6 +28,8 @@
 (require 'anything-config)
 (require 'sha1 nil t)
 
+(defvar anything-git-files:cached nil)
+
 (defgroup anything-git-files nil
   "anything for git files."
   :prefix "anything-git-files:" :group 'anything)
@@ -81,6 +83,11 @@
 
 (defun anything-git-files:ls (buffer &rest args)
   (apply 'vc-git-command buffer 0 nil "ls-files" args))
+
+(defun anything-git-files:ls-async (buffer callback &rest args)
+  (let ((proc (apply 'vc-git-command buffer 'async nil "ls-files" args)))
+    (set-process-sentinel proc callback)
+    proc))
 
 (defun anything-git-files:status-1 ()
   (anything-git-files:command-to-string "status" "--porcelain" "-uno"))
@@ -150,16 +157,26 @@ is tracked for each KEY separately."
          (buffer-name (format " *anything candidates:%s:%s*" root what))
          (buffer (get-buffer-create buffer-name)))
     (anything-attrset 'default-directory root) ; saved for `display-to-real'
-    (when (anything-git-files:updated-p what root what update-once)
+    (when (and (not (member buffer-name anything-git-files:cached))
+               (anything-git-files:updated-p what root what update-once))
       (let ((default-directory root)
             (args (cdr (assq what anything-git-files:ls-args)))
-            contents candidates)
-        (apply 'anything-git-files:ls buffer "--full-name" args)))
+            (callback 'anything-git-files:sentinel))
+        (apply 'anything-git-files:ls-async buffer callback
+               "--full-name" args)
+        (push buffer-name anything-git-files:cached)))
     (anything-candidate-buffer buffer)
     (anything-candidates-in-buffer)))
 
+(defun anything-git-files:sentinel (process event)
+  (when (and (equal event "finished\n") (anything-window))
+    (anything-update)))
+
 (defun anything-git-files:init ()
   (anything-attrset 'default-directory default-directory))
+
+(defun anything-git-files:cleanup ()
+  (setq anything-git-files:cached nil))
 
 (defun anything-git-files:candidates-fun (what &optional root update-once)
   `(lambda () (anything-git-files:candidates ',what ,root ,update-once)))
@@ -172,6 +189,7 @@ is tracked for each KEY separately."
                       (or (and repository (format " in %s" repository)) ""))))
     `((name . ,name)
       (init . anything-git-files:init)
+      (cleanup . anything-git-files:cleanup)
       (candidates . ,(anything-git-files:candidates-fun what root update-once))
       (delayed)
       (volatile)
