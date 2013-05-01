@@ -29,6 +29,9 @@
 (require 'sha1 nil t)
 
 (defvar anything-git-files:cached nil)
+(defvar anything-git-files:update-delay 0.1)
+(defvar anything-git-files:update-timer nil)
+(defvar anything-git-files:last-update 0)
 
 (defgroup anything-git-files nil
   "anything for git files."
@@ -170,7 +173,23 @@ is tracked for each KEY separately."
 
 (defun anything-git-files:sentinel (process event)
   (when (and (equal event "finished\n") (anything-window))
-    (anything-update)))
+    (anything-git-files:throttled-update)))
+
+(defun anything-git-files:update-1 ()
+  (setq anything-git-files:last-update (float-time)
+        anything-git-files:update-timer nil)
+  (anything-update))
+
+(defun anything-git-files:throttled-update ()
+  (if (<= (- (float-time) anything-git-files:last-update)
+          anything-git-files:update-delay)
+      (unless anything-git-files:update-timer
+        (setq anything-git-files:update-timer
+              (run-at-time anything-git-files:update-delay nil
+                           'anything-git-files:update-1)))
+    (when anything-git-files:update-timer
+      (cancel-timer anything-git-files:update-timer))
+    (anything-git-files:update-1)))
 
 (defun anything-git-files:init ()
   (anything-attrset 'default-directory (anything-git-files:root)))
