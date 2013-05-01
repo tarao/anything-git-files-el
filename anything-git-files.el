@@ -178,8 +178,12 @@ is tracked for each KEY separately."
 (defun anything-git-files:update-1 ()
   (setq anything-git-files:last-update (float-time)
         anything-git-files:update-timer nil)
-  (when (anything-window)
-    (anything-update)))
+  (when (and (anything-window) (buffer-live-p anything-buffer))
+    (with-current-buffer anything-buffer
+      (let ((line (line-number-at-pos)))
+        (anything-update)
+        (goto-char (point-min))
+        (forward-line (1- line))))))
 
 (defun anything-git-files:throttled-update ()
   (if (<= (- (float-time) anything-git-files:last-update)
