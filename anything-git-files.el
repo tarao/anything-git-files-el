@@ -172,13 +172,14 @@ is tracked for each KEY separately."
     (anything-candidates-in-buffer)))
 
 (defun anything-git-files:sentinel (process event)
-  (when (and (equal event "finished\n") (anything-window))
+  (when (equal event "finished\n")
     (anything-git-files:throttled-update)))
 
 (defun anything-git-files:update-1 ()
   (setq anything-git-files:last-update (float-time)
         anything-git-files:update-timer nil)
-  (anything-update))
+  (when (anything-window)
+    (anything-update)))
 
 (defun anything-git-files:throttled-update ()
   (if (<= (- (float-time) anything-git-files:last-update)
