@@ -178,7 +178,7 @@ is tracked for each KEY separately."
 (defun anything-git-files:update-1 ()
   (setq anything-git-files:last-update (float-time)
         anything-git-files:update-timer nil)
-  (when (and (anything-window) (buffer-live-p anything-buffer))
+  (when (and (anything-window) (buffer-live-p (get-buffer anything-buffer)))
     (with-current-buffer anything-buffer
       (let ((line (line-number-at-pos)))
         (anything-update)
