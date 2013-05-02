@@ -28,6 +28,11 @@
 (require 'anything-config)
 (require 'sha1 nil t)
 
+(defvar anything-git-files:cached nil)
+(defvar anything-git-files:update-delay 0.1)
+(defvar anything-git-files:update-timer nil)
+(defvar anything-git-files:last-update 0)
+
 (defgroup anything-git-files nil
   "anything for git files."
   :prefix "anything-git-files:" :group 'anything)
@@ -44,7 +49,7 @@
 
 (defconst anything-git-files:update-check-functions
   '((modified . anything-git-files:status-updated-p)
-    (untracked . anything-git-files:status-updated-p)
+    (untracked . anything-git-files:t)
     (all . anything-git-files:head-updated-p)))
 
 (defconst anything-git-files:status-expire 1)
@@ -82,8 +87,13 @@
 (defun anything-git-files:ls (buffer &rest args)
   (apply 'vc-git-command buffer 0 nil "ls-files" args))
 
+(defun anything-git-files:ls-async (buffer callback &rest args)
+  (let ((proc (apply 'vc-git-command buffer 'async nil "ls-files" args)))
+    (set-process-sentinel proc callback)
+    proc))
+
 (defun anything-git-files:status-1 ()
-  (anything-git-files:command-to-string "status" "--porcelain"))
+  (anything-git-files:command-to-string "status" "--porcelain" "-uno"))
 
 (defun anything-git-files:status-hash (&optional root)
   "Get hash value of \"git status\" for ROOT repository.
@@ -110,6 +120,8 @@ they have been updated."
     (unless updated
       (vc-file-setprop root prop t)
       t)))
+
+(defun anything-git-files:t (&rest args) t)
 
 (defun anything-git-files:head-updated-p (root &optional key)
   (let* ((key (or (and key (format "-%s" key)) ""))
@@ -141,17 +153,61 @@ is tracked for each KEY separately."
     (loop for fun in funs
           always (funcall fun root key))))
 
-(defun anything-git-files:init-fun (what &optional root update-once)
-  `(lambda ()
-     (let* ((root (or ,root (anything-git-files:root)))
-            (buffer-name (format " *anything candidates:%s:%s*" root ',what))
-            (buffer (get-buffer-create buffer-name)))
-       (anything-attrset 'default-directory root) ; saved for `display-to-real'
-       (anything-candidate-buffer buffer)
-       (when (anything-git-files:updated-p ',what root ',what ,update-once)
-         (let ((default-directory root)
-               (args (cdr (assq ',what anything-git-files:ls-args))))
-           (apply 'anything-git-files:ls buffer "--full-name" args))))))
+(defun anything-git-files:candidates (what &optional root update-once)
+  (let* ((root (or root
+                   (anything-attr 'default-directory)
+                   (anything-git-files:root)))
+         (buffer-name (format " *anything candidates:%s:%s*" root what))
+         (buffer (get-buffer-create buffer-name)))
+    (anything-attrset 'default-directory root) ; saved for `display-to-real'
+    (when (and (not (member buffer-name anything-git-files:cached))
+               (anything-git-files:updated-p what root what update-once))
+      (let ((default-directory root)
+            (args (cdr (assq what anything-git-files:ls-args)))
+            (callback 'anything-git-files:sentinel))
+        (apply 'anything-git-files:ls-async buffer callback
+               "--full-name" args)
+        (push buffer-name anything-git-files:cached)))
+    (anything-candidate-buffer buffer)
+    (anything-candidates-in-buffer)))
+
+(defun anything-git-files:sentinel (process event)
+  (when (equal event "finished\n")
+    (anything-git-files:throttled-update)))
+
+(defun anything-git-files:update-1 ()
+  (setq anything-git-files:last-update (float-time)
+        anything-git-files:update-timer nil)
+  (when (and (anything-window) (buffer-live-p (get-buffer anything-buffer)))
+    (with-anything-window
+      (with-current-buffer anything-buffer
+        (let ((line (line-number-at-pos)))
+          (anything-update)
+          (goto-char (point-min))
+          (forward-line (1- line))
+          (anything-skip-noncandidate-line 'next)
+          (anything-mark-current-line)
+          (anything-display-mode-line (anything-get-current-source)))))))
+
+(defun anything-git-files:throttled-update ()
+  (if (<= (- (float-time) anything-git-files:last-update)
+          anything-git-files:update-delay)
+      (unless anything-git-files:update-timer
+        (setq anything-git-files:update-timer
+              (run-at-time anything-git-files:update-delay nil
+                           'anything-git-files:update-1)))
+    (when anything-git-files:update-timer
+      (cancel-timer anything-git-files:update-timer))
+    (anything-git-files:update-1)))
+
+(defun anything-git-files:init ()
+  (anything-attrset 'default-directory (anything-git-files:root)))
+
+(defun anything-git-files:cleanup ()
+  (setq anything-git-files:cached nil))
+
+(defun anything-git-files:candidates-fun (what &optional root update-once)
+  `(lambda () (anything-git-files:candidates ',what ,root ,update-once)))
 
 (defun anything-git-files:display-to-real (name)
   (expand-file-name name (anything-attr 'default-directory)))
@@ -160,9 +216,12 @@ is tracked for each KEY separately."
   (let ((name (concat (format "Git %s" (capitalize (format "%s" what)))
                       (or (and repository (format " in %s" repository)) ""))))
     `((name . ,name)
-      (init . ,(anything-git-files:init-fun what root update-once))
-      (candidates-in-buffer)
+      (init . anything-git-files:init)
+      (cleanup . anything-git-files:cleanup)
+      (candidates . ,(anything-git-files:candidates-fun what root update-once))
       (delayed)
+      (volatile)
+      (match identity)
       (type . file)
       (display-to-real . anything-git-files:display-to-real))))
 
