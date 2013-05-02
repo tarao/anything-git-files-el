@@ -179,11 +179,13 @@ is tracked for each KEY separately."
   (setq anything-git-files:last-update (float-time)
         anything-git-files:update-timer nil)
   (when (and (anything-window) (buffer-live-p (get-buffer anything-buffer)))
-    (with-current-buffer anything-buffer
-      (let ((line (line-number-at-pos)))
-        (anything-update)
-        (goto-char (point-min))
-        (forward-line (1- line))))))
+    (with-anything-window
+      (with-current-buffer anything-buffer
+        (let ((line (line-number-at-pos)))
+          (anything-update)
+          (goto-char (point-min))
+          (forward-line (1- line))
+          (anything-mark-current-line))))))
 
 (defun anything-git-files:throttled-update ()
   (if (<= (- (float-time) anything-git-files:last-update)
