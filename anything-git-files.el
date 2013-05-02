@@ -185,7 +185,9 @@ is tracked for each KEY separately."
           (anything-update)
           (goto-char (point-min))
           (forward-line (1- line))
-          (anything-mark-current-line))))))
+          (anything-skip-noncandidate-line 'next)
+          (anything-mark-current-line)
+          (anything-display-mode-line (anything-get-current-source)))))))
 
 (defun anything-git-files:throttled-update ()
   (if (<= (- (float-time) anything-git-files:last-update)
