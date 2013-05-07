@@ -204,6 +204,7 @@ is tracked for each KEY separately."
   (anything-attrset 'default-directory (anything-git-files:root)))
 
 (defun anything-git-files:cleanup ()
+  (anything-new-timer 'anything-process-delayed-sources-timer nil)
   (setq anything-git-files:cached nil))
 
 (defun anything-git-files:candidates-fun (what &optional root update-once)
