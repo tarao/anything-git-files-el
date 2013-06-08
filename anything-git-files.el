@@ -2,6 +2,7 @@
 
 ;; Author: INA Lintaro <tarao.gnn at gmail.com>
 ;; Version: 0.1
+;; Package-Requires: ((anything "1.3.9"))
 ;; Keywords: anything, git
 
 ;; This file is NOT part of GNU Emacs.
