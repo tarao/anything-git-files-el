@@ -152,7 +152,7 @@ is tracked for each KEY separately."
                     anything-git-files:status-updated-p))))
     (unless (listp funs) (setq funs (list funs)))
     (loop for fun in funs
-          always (funcall fun root key))))
+          thereis (funcall fun root key))))
 
 (defun anything-git-files:candidates (what &optional root update-once)
   (let* ((root (or root
