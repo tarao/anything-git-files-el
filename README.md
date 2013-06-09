@@ -1,6 +1,8 @@
 anything-git-files.el --- anything for git files
 ================================================
 
+![M-x anything-git-files](http://cdn-ak.f.st-hatena.com/images/fotolife/t/tarao/20130422/20130422080444.png "M-x anything-git-files")
+
 ## Features
 
 - List all the files in a git repository which the file of the current buffer belongs to
